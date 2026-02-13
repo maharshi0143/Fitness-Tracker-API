@@ -1,0 +1,95 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Gym {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  capacity    Int
+  address     Json
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  members     Member[]
+  assignments TrainerAssignment[]
+
+  @@map("gyms")
+}
+
+model Trainer {
+  id             String   @id @default(cuid())
+  name           String
+  certifications Json     // List of certifications with expiry dates
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  assignments    TrainerAssignment[]
+
+  @@map("trainers")
+}
+
+model TrainerAssignment {
+  id        String   @id @default(cuid())
+  trainerId String
+  gymId     String
+  assignedAt DateTime @default(now())
+
+  trainer   Trainer @relation(fields: [trainerId], references: [id])
+  gym       Gym     @relation(fields: [gymId], references: [id])
+
+  @@unique([trainerId, gymId]) // Prevent duplicate assignments
+  @@map("trainer_assignments")
+}
+
+model Member {
+  id             String   @id @default(cuid())
+  name           String
+  gymId          String
+  membershipTier String
+  joinedAt       DateTime @default(now())
+
+  gym            Gym            @relation(fields: [gymId], references: [id])
+  workouts       Workout[]
+  healthMetrics  HealthMetric[]
+
+  @@map("members")
+}
+
+model Workout {
+  id        String   @id @default(cuid())
+  memberId  String
+  date      DateTime @default(now())
+
+  member    Member     @relation(fields: [memberId], references: [id])
+  exercises Exercise[]
+
+  @@map("workouts")
+}
+
+model Exercise {
+  id        String   @id @default(cuid())
+  workoutId String
+  type      String   // 'strength', 'cardio', etc.
+  data      Json     // Polymorphic data (reps/sets for strength, duration for cardio)
+
+  workout   Workout @relation(fields: [workoutId], references: [id])
+
+  @@map("exercises")
+}
+
+model HealthMetric {
+  id         String   @id @default(cuid())
+  memberId   String
+  type       String   // 'heart_rate', 'weight', etc.
+  value      Float
+  recordedAt DateTime @default(now())
+
+  member     Member @relation(fields: [memberId], references: [id])
+
+  @@map("health_metrics")
+}
